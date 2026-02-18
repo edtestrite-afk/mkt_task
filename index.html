@@ -173,9 +173,19 @@ qs('#nextMonth').addEventListener('click',()=>{currentViewDate.setDate(1); curre
 
 // Fetch tasks from Supabase
 async function fetchTasks() {
-  const { data, error } = await db.from('tasks').select('*').order('created_at',{ascending:true});
-  if(error) return console.error(error);
-  tasks = data || [];
+  const { data, error } = await db
+    .from('tasks')
+    .select('*')
+    .order('created_at', { ascending: true });
+
+  if (error) {
+    console.error(error);
+    return;
+  }
+
+  // Remove rows without valid date
+  tasks = (data || []).filter(t => t.date && !isNaN(new Date(t.date)));
+
   renderCalendar();
 }
 
@@ -272,19 +282,50 @@ function renderCalendar(){
 }
 
 // Summary & core progress
-function getMonthlyUGCStats(){
+function getMonthlyUGCStats() {
   const monthKey = `${currentViewDate.getFullYear()}-${currentViewDate.getMonth()}`;
-  const monthlyUGC = tasks.filter(t=>t.type==='UGC Video' && `${new Date(t.date).getFullYear()}-${new Date(t.date).getMonth()}`===monthKey && t.status==='Published');
+
+  const monthlyUGC = tasks.filter(t => {
+    if (!t.date) return false;
+
+    const d = new Date(t.date);
+    if (isNaN(d)) return false;
+
+    return (
+      t.type === 'UGC Video' &&
+      `${d.getFullYear()}-${d.getMonth()}` === monthKey &&
+      t.status === 'Published'
+    );
+  });
+
   const count = monthlyUGC.length;
-  const rate = count>=15?18:count>=10?15:count>=6?12:count>=1?10:0;
-  return {count, rate, totalBonus: count*rate};
+  const rate = count >= 15 ? 18 :
+               count >= 10 ? 15 :
+               count >= 6  ? 12 :
+               count >= 1  ? 10 : 0;
+
+  return { count, rate, totalBonus: count * rate };
 }
 
-function updateSummary(){
+function updateSummary() {
   const monthKey = `${currentViewDate.getFullYear()}-${currentViewDate.getMonth()}`;
-  const monthlyTasks = tasks.filter(t=>`${new Date(t.date).getFullYear()}-${new Date(t.date).getMonth()}`===monthKey);
-  const ugcStats=getMonthlyUGCStats();
-  qs('#summaryStats').innerHTML=`<div><b>Current Tier Rate:</b> $${ugcStats.rate}/video</div><div><b>Total UGC Bonus:</b> $${ugcStats.totalBonus}</div>`;
+
+  const monthlyTasks = tasks.filter(t => {
+    if (!t.date) return false;
+
+    const d = new Date(t.date);
+    if (isNaN(d)) return false;
+
+    return `${d.getFullYear()}-${d.getMonth()}` === monthKey;
+  });
+
+  const ugcStats = getMonthlyUGCStats();
+
+  qs('#summaryStats').innerHTML = `
+    <div><b>Current Tier Rate:</b> $${ugcStats.rate}/video</div>
+    <div><b>Total UGC Bonus:</b> $${ugcStats.totalBonus}</div>
+  `;
+
   updateCoreProgress(monthlyTasks);
 }
 
@@ -310,4 +351,5 @@ fetchTasks();
 
 </body>
 </html>
+
 
