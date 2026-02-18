@@ -9,8 +9,9 @@
   <script>
     const SUPABASE_URL = "https://mmpajrskxwyebhhkehnb.supabase.co";
     const SUPABASE_ANON_KEY = "sb_publishable_-d3dyjutpsJgt2-RIm4zYA_tJiFcR5n";
-    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  </script>
+const { createClient } = supabase
+const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+</script>
   <style>
     .priority-high { border-left: 4px solid #ef4444; background: #fee2e2; }
     .priority-med  { border-left: 4px solid #f59e0b; background: #fef3c7; }
@@ -172,7 +173,7 @@ qs('#nextMonth').addEventListener('click',()=>{currentViewDate.setDate(1); curre
 
 // Fetch tasks from Supabase
 async function fetchTasks() {
-  const { data, error } = await supabase.from('tasks').select('*').order('created_at',{ascending:true});
+  const { data, error } = await db.from('tasks').select('*').order('created_at',{ascending:true});
   if(error) return console.error(error);
   tasks = data || [];
   renderCalendar();
@@ -212,9 +213,9 @@ async function saveTask(){
   if(!data.title||!data.date) return alert('Title and Date required');
 
   if(editingId){ 
-    await supabase.from('tasks').update(data).eq('id',editingId);
+    await db.from('tasks').update(data).eq('id',editingId);
   } else {
-    await supabase.from('tasks').insert([data]);
+    await db.from('tasks').insert([data]);
   }
   fetchTasks();
   closeModal();
@@ -222,7 +223,7 @@ async function saveTask(){
 
 // Delete task
 async function deleteTask(){
-  if(editingId){ await supabase.from('tasks').delete().eq('id',editingId); fetchTasks(); closeModal(); }
+  if(editingId){ await db.from('tasks').delete().eq('id',editingId); fetchTasks(); closeModal(); }
 }
 
 // Save/cancel/delete button events
@@ -309,3 +310,4 @@ fetchTasks();
 
 </body>
 </html>
+
