@@ -2,48 +2,305 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Task List</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Marketing Hub — Core + UGC Tier System</title>
+  <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
     const SUPABASE_URL = "https://mmpajrskxwyebhhkehnb.supabase.co";
     const SUPABASE_ANON_KEY = "sb_publishable_-d3dyjutpsJgt2-RIm4zYA_tJiFcR5n";
     const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   </script>
+  <style>
+    .priority-high { border-left: 4px solid #ef4444; background: #fee2e2; }
+    .priority-med  { border-left: 4px solid #f59e0b; background: #fef3c7; }
+    .priority-low  { border-left: 4px solid #10b981; background: #d1fae5; }
+
+    .status-inprogress { background-color: #fef3c7; border-left: 4px solid #f59e0b; }
+    .status-needsreview { background-color: #fee2e2; border-left: 4px solid #ef4444; }
+    .status-approved { background-color: #e0f2fe; border-left: 4px solid #0ea5e9; }
+    .status-scheduled { background-color: #80ed99; border-left: 4px solid #4f772d; }
+    .status-published { background-color: #d1fae5; border-left: 4px solid #10b981; }
+
+    .modal-overlay { display: none; position: fixed; inset: 0; z-index: 60; align-items: center; justify-content: center; }
+    .modal-overlay[aria-hidden="false"] { display: flex; }
+  </style>
 </head>
-<body>
-  <h2>Task List</h2>
-  <input type="text" id="taskInput" placeholder="Enter a task">
-  <button id="addBtn">Add Task</button>
-  <ul id="taskList"></ul>
+<body class="bg-slate-100 min-h-screen p-4 font-sans">
 
-  <script>
-    const taskList = document.getElementById('taskList');
-    const addBtn = document.getElementById('addBtn');
+<div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6">
 
-    // Fetch tasks from Supabase
-    async function fetchTasks() {
-      const { data, error } = await supabase.from('tasks').select('*').order('created_at', { ascending: true });
-      if (error) return console.error(error);
-      taskList.innerHTML = '';
-      data.forEach(task => {
-        const li = document.createElement('li');
-        li.textContent = task.task;
-        taskList.appendChild(li);
-      });
-    }
+  <!-- Sidebar -->
+  <aside class="lg:col-span-3 space-y-6">
+    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+      <h2 class="text-lg font-bold mb-3">Monthly Overview</h2>
+      <div id="summaryStats" class="space-y-3"></div>
+    </div>
 
-    // Add a task to Supabase
-    async function addTask() {
-      const input = document.getElementById('taskInput');
-      if(input.value.trim() === '') return;
-      const { data, error } = await supabase.from('tasks').insert([{ task: input.value.trim() }]);
-      if(error) console.error(error);
-      input.value = '';
-      fetchTasks();
-    }
+    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+      <h2 class="text-lg font-bold mb-4">Core Progress Tracker</h2>
+      <div id="coreProgress" class="space-y-3 text-xs"></div>
+    </div>
+  </aside>
 
-    addBtn.addEventListener('click', addTask);
-    fetchTasks(); // initial load
-  </script>
+  <!-- Main Calendar -->
+  <main class="lg:col-span-9 space-y-4">
+    <div class="bg-white p-6 rounded-2xl shadow-sm border">
+      <div class="flex justify-between items-center mb-4">
+        <div class="flex gap-2">
+          <select id="selectMonth" class="p-2 border rounded text-xs"></select>
+          <select id="selectYear" class="p-2 border rounded text-xs"></select>
+          <button id="todayBtn" class="p-2 border rounded text-xs bg-slate-200">Today</button>
+        </div>
+        <div class="flex gap-2">
+          <button id="prevMonth" class="p-2 border rounded">←</button>
+          <button id="nextMonth" class="p-2 border rounded">→</button>
+        </div>
+      </div>
+      <h2 id="monthDisplay" class="text-2xl font-black uppercase mb-4"></h2>
+      <div id="calendar" class="grid grid-cols-7 border-t border-l"></div>
+    </div>
+  </main>
+
+</div>
+
+<!-- Task Modal -->
+<div id="taskModal" class="modal-overlay" aria-hidden="true">
+  <div class="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
+    <h3 class="text-xl font-bold mb-4 text-indigo-700">Task</h3>
+    <form id="taskForm" class="space-y-4" onsubmit="return false;">
+      <div>
+        <label class="text-xs font-bold">Title</label>
+        <input id="mTitle" type="text" class="w-full p-2 border rounded-lg" required>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="text-xs font-bold">Task Type</label>
+          <select id="mType" class="w-full p-2 border rounded-lg text-xs">
+            <option value="UGC Video">8-10 Short-Form TikTok Videos</option>
+            <option value="Blog Article">Blog Article</option>
+            <option value="Shoot Coordination">Shoot Coordination</option>
+            <option value="Crosspost">12 Posts Cross-Post IG/FB</option>
+            <option value="Content Calendar">Update Content Calendar</option>
+            <option value="UGC Outreach">UGC Outreach</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-xs font-bold">Priority</label>
+          <select id="mPriority" class="w-full p-2 border rounded-lg text-xs">
+            <option value="low">Low</option>
+            <option value="med">Medium</option>
+            <option value="high">High</option>
+          </select>
+        </div>
+      </div>
+
+      <div>
+        <label class="text-xs font-bold">Posting Platforms</label>
+        <div id="mPlatforms" class="grid grid-cols-2 gap-2 text-xs mt-1">
+          <label class="flex items-center gap-2"><input type="checkbox" value="TikTok" class="platform-checkbox"> TikTok</label>
+          <label class="flex items-center gap-2"><input type="checkbox" value="Meta" class="platform-checkbox"> Meta</label>
+          <label class="flex items-center gap-2"><input type="checkbox" value="Blog" class="platform-checkbox"> Blog</label>
+          <label class="flex items-center gap-2"><input type="checkbox" value="Film" class="platform-checkbox"> Film</label>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="text-xs font-bold">Status</label>
+          <select id="mStatus" class="w-full p-2 border rounded-lg text-xs">
+            <option>In Progress</option>
+            <option>Needs Review</option>
+            <option>Approved</option>
+            <option>Scheduled</option>
+            <option>Published</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-xs font-bold">Date</label>
+          <input id="mDate" type="date" class="w-full p-2 border rounded-lg text-xs" required>
+        </div>
+      </div>
+
+      <div class="flex gap-2">
+        <button id="saveBtn" class="flex-1 bg-indigo-600 text-white py-2 rounded-lg">Save</button>
+        <button id="cancelBtn" type="button" class="flex-1 bg-slate-200 py-2 rounded-lg">Cancel</button>
+      </div>
+      <button id="deleteBtn" type="button" class="w-full text-red-500 text-xs font-bold hidden">Delete</button>
+    </form>
+  </div>
+</div>
+
+<script>
+let tasks = [];
+let currentViewDate = new Date();
+let editingId = null;
+const qs = s => document.querySelector(s);
+const priorityClass = { high:'priority-high', med:'priority-med', low:'priority-low' };
+const statusClass = {
+  "In Progress": "status-inprogress",
+  "Needs Review": "status-needsreview",
+  "Approved": "status-approved",
+  "Scheduled": "status-scheduled",
+  "Published": "status-published"
+};
+
+// Month & Year dropdowns
+const selectMonth = qs('#selectMonth');
+const selectYear = qs('#selectYear');
+for(let m=0;m<12;m++){
+  const opt = document.createElement('option');
+  opt.value = m;
+  opt.textContent = new Intl.DateTimeFormat('en-US',{month:'long'}).format(new Date(2000,m,1));
+  selectMonth.appendChild(opt);
+}
+const currentYear = new Date().getFullYear();
+for(let y=currentYear-5;y<=currentYear+5;y++){
+  const opt = document.createElement('option'); opt.value=y; opt.textContent=y;
+  selectYear.appendChild(opt);
+}
+selectMonth.addEventListener('change',()=>{currentViewDate.setMonth(parseInt(selectMonth.value)); renderCalendar();});
+selectYear.addEventListener('change',()=>{currentViewDate.setFullYear(parseInt(selectYear.value)); renderCalendar();});
+qs('#todayBtn').addEventListener('click',()=>{currentViewDate=new Date(); renderCalendar();});
+qs('#prevMonth').addEventListener('click',()=>{currentViewDate.setDate(1); currentViewDate.setMonth(currentViewDate.getMonth()-1); renderCalendar();});
+qs('#nextMonth').addEventListener('click',()=>{currentViewDate.setDate(1); currentViewDate.setMonth(currentViewDate.getMonth()+1); renderCalendar();});
+
+// Fetch tasks from Supabase
+async function fetchTasks() {
+  const { data, error } = await supabase.from('tasks').select('*').order('created_at',{ascending:true});
+  if(error) return console.error(error);
+  tasks = data;
+  renderCalendar();
+}
+
+// Save a task to Supabase
+async function saveTaskToSupabase(task) {
+  if(task.id){ // update
+    const { error } = await supabase.from('tasks').update(task).eq('id', task.id);
+    if(error) console.error(error);
+  } else { // insert
+    const { error } = await supabase.from('tasks').insert([task]);
+    if(error) console.error(error);
+  }
+  fetchTasks();
+}
+
+// Render calendar
+function renderCalendar(){
+  selectMonth.value = currentViewDate.getMonth();
+  selectYear.value = currentViewDate.getFullYear();
+  const grid = qs('#calendar'); grid.innerHTML = '';
+  ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].forEach(d=>{
+    const el=document.createElement('div'); el.className='p-2 border-r border-b text-center text-xs font-bold bg-slate-50'; el.textContent=d; grid.appendChild(el);
+  });
+  const year=currentViewDate.getFullYear();
+  const month=currentViewDate.getMonth();
+  qs('#monthDisplay').textContent=new Intl.DateTimeFormat('en-US',{month:'long',year:'numeric'}).format(currentViewDate);
+
+  const firstDay = new Date(year,month,1).getDay();
+  const daysInMonth = new Date(year,month+1,0).getDate();
+  for(let i=0;i<firstDay;i++){ const empty=document.createElement('div'); empty.className='h-32 border-r border-b bg-slate-50/30'; grid.appendChild(empty); }
+
+  for(let day=1;day<=daysInMonth;day++){
+    const dateStr=`${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+    const dayTasks = tasks.filter(t=>t.date===dateStr);
+    const cell = document.createElement('div'); cell.className='h-36 border-r border-b p-1 relative group overflow-y-auto';
+    const label = document.createElement('span'); label.className='text-[10px] font-bold text-slate-400'; label.textContent = day; cell.appendChild(label);
+
+    const addBtn = document.createElement('button'); addBtn.textContent='+'; addBtn.className='absolute top-1 right-1 text-xs opacity-0 group-hover:opacity-100'; addBtn.onclick=()=>openModal(null,dateStr); cell.appendChild(addBtn);
+
+    dayTasks.forEach(task=>{
+      const t=document.createElement('div');
+      t.className=`mt-1 p-2 rounded text-[10px] font-bold cursor-pointer ${priorityClass[task.priority]} ${statusClass[task.status]||''}`;
+      t.innerHTML=`${task.type==='UGC Video'?'💰 ':''}${task.title}`;
+      if(task.platforms && task.platforms.length){ const pl=document.createElement('div'); pl.className='text-[9px] font-normal mt-1 opacity-70'; pl.textContent=task.platforms.join(', '); t.appendChild(pl); }
+      t.onclick=()=>openModal(task.id);
+      cell.appendChild(t);
+    });
+    grid.appendChild(cell);
+  }
+  updateSummary();
+}
+
+// Summary & core progress
+function getMonthlyUGCStats(){
+  const monthKey = `${currentViewDate.getFullYear()}-${currentViewDate.getMonth()}`;
+  const monthlyUGC = tasks.filter(t=>t.type==='UGC Video' && `${new Date(t.date).getFullYear()}-${new Date(t.date).getMonth()}`===monthKey && t.status==='Published');
+  const count = monthlyUGC.length;
+  const rate = (count >= 15 ? 18 : count>=10 ? 15 : count>=6 ? 12 : count>=1 ? 10 : 0);
+  return { count, rate, totalBonus: count*rate };
+}
+
+function updateSummary(){
+  const monthKey = `${currentViewDate.getFullYear()}-${currentViewDate.getMonth()}`;
+  const monthlyTasks = tasks.filter(t=>`${new Date(t.date).getFullYear()}-${new Date(t.date).getMonth()}`===monthKey);
+  const ugcStats = getMonthlyUGCStats();
+  qs('#summaryStats').innerHTML=`<div><b>Current Tier Rate:</b> $${ugcStats.rate}/video</div><div><b>Total UGC Bonus:</b> $${ugcStats.totalBonus}</div>`;
+  updateCoreProgress(monthlyTasks);
+}
+
+function updateCoreProgress(monthlyTasks){
+  const goals = [
+    {name:'Short-Form UGC TikTok Videos', target:10, type:'UGC Video'},
+    {name:'Blog Article', target:1, type:'Blog Article'},
+    {name:'Shoot Coordination', target:3, type:'Shoot Coordination'},
+    {name:'12 Posts Cross-Post IG/FB', target:12, type:'Crosspost'},
+    {name:'Update Content Calendar', target:1, type:'Content Calendar'},
+    {name:'UGC Outreach', target:30, type:'UGC Outreach'}
+  ];
+  qs('#coreProgress').innerHTML = goals.map(g=>{
+    const count = monthlyTasks.filter(t=>t.type===g.type).length;
+    const percent = Math.min(100,Math.round((count/g.target)*100));
+    return `<div><div class="flex justify-between mb-1"><span>${g.name}</span><span>${count}/${g.target}</span></div><div class="w-full bg-slate-200 rounded-full h-2"><div class="bg-indigo-500 h-2 rounded-full" style="width:${percent}%"></div></div></div>`;
+  }).join('');
+}
+
+// Modal
+function openModal(id=null,date=null){
+  editingId = id;
+  qs('#taskForm').reset();
+  document.querySelectorAll('.platform-checkbox').forEach(cb=>cb.checked=false);
+  qs('#deleteBtn').classList.add('hidden');
+
+  if(id){
+    const task = tasks.find(t=>t.id===id);
+    qs('#mTitle').value = task.title;
+    qs('#mType').value = task.type;
+    qs('#mPriority').value = task.priority;
+    qs('#mStatus').value = task.status;
+    qs('#mDate').value = task.date;
+    document.querySelectorAll('.platform-checkbox').forEach(cb=>{cb.checked = task.platforms && task.platforms.includes(cb.value);});
+    qs('#deleteBtn').classList.remove('hidden');
+  } else if(date){ qs('#mDate').value = date; }
+  qs('#taskModal').setAttribute('aria-hidden','false');
+}
+function closeModal(){ qs('#taskModal').setAttribute('aria-hidden','true'); editingId=null; }
+async function saveTask(){
+  const selectedPlatforms = Array.from(document.querySelectorAll('.platform-checkbox:checked')).map(cb=>cb.value);
+  const data={
+    title:qs('#mTitle').value.trim(),
+    type:qs('#mType').value,
+    priority:qs('#mPriority').value,
+    status:qs('#mStatus').value,
+    date:qs('#mDate').value,
+    platforms:selectedPlatforms
+  };
+  if(!data.title||!data.date) return alert('Title and Date required');
+  if(editingId){ Object.assign(tasks.find(t=>t.id===editingId),data); await supabase.from('tasks').update(data).eq('id',editingId); } 
+  else { await supabase.from('tasks').insert([data]); }
+  fetchTasks();
+  closeModal();
+}
+async function deleteTask(){ if(editingId){ await supabase.from('tasks').delete().eq('id',editingId); fetchTasks(); closeModal(); } }
+
+// Event listeners
+qs('#saveBtn').addEventListener('click',saveTask);
+qs('#cancelBtn').addEventListener('click',closeModal);
+qs('#deleteBtn').addEventListener('click',deleteTask);
+
+// Initial load
+fetchTasks();
+</script>
+
 </body>
 </html>
