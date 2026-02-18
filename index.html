@@ -216,40 +216,69 @@ qs('#cancelBtn').addEventListener('click',closeModal);
 qs('#deleteBtn').addEventListener('click',deleteTask);
 
 function renderCalendar(){
-  selectMonth.value=currentViewDate.getMonth();
-  selectYear.value=currentViewDate.getFullYear();
-  const grid=qs('#calendar'); grid.innerHTML='';
-  ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].forEach(d=>{
-    const el=document.createElement('div'); el.className='p-2 border-r border-b text-center text-xs font-bold bg-slate-50'; el.textContent=d; grid.appendChild(el);
-  });
-  const year=currentViewDate.getFullYear();
-  const month=currentViewDate.getMonth();
-  qs('#monthDisplay').textContent=new Intl.DateTimeFormat('en-US',{month:'long',year:'numeric'}).format(currentViewDate);
-
-  const firstDay = new Date(year,month,1).getDay();
-  const daysInMonth = new Date(year,month+1,0).getDate();
-  for(let i=0;i<firstDay;i++){ const empty=document.createElement('div'); empty.className='h-32 border-r border-b bg-slate-50/30'; grid.appendChild(empty); }
-
-  for(let day=1;day<=daysInMonth;day++){
-    const dateStr=`${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-    const dayTasks = tasks.filter(t=>t.date===dateStr);
-    const cell=document.createElement('div'); cell.className='h-36 border-r border-b p-1 relative group overflow-y-auto';
-    const label=document.createElement('span'); label.className='text-[10px] font-bold text-slate-400'; label.textContent=day; cell.appendChild(label);
-    const addBtn=document.createElement('button'); addBtn.textContent='+'; addBtn.className='absolute top-1 right-1 text-xs opacity-0 group-hover:opacity-100'; addBtn.onclick=()=>openModal(null,dateStr); cell.appendChild(addBtn);
-
-    dayTasks.forEach(task=>{
-      const t=document.createElement('div');
-      t.className=`mt-1 p-2 rounded text-[10px] font-bold cursor-pointer ${priorityClass[task.priority]} ${statusClass[task.status]||''}`;
-      t.innerHTML=`${task.type==='UGC Video'?'💰 ':''}${task.title}`;
-      if(task.platforms?.length){
-        const pl=document.createElement('div'); pl.className='text-[9px] font-normal mt-1 opacity-70'; pl.textContent=task.platforms.join(', '); t.appendChild(pl);
-      }
-      t.onclick=()=>openModal(task.id);
-      cell.appendChild(t);
+  try {
+    selectMonth.value = currentViewDate.getMonth();
+    selectYear.value = currentViewDate.getFullYear();
+    
+    const grid = qs('#calendar'); 
+    grid.innerHTML = '';
+    
+    // Headers
+    ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].forEach(d => {
+      const el = document.createElement('div');
+      el.className = 'p-2 border-r border-b text-center text-xs font-bold bg-slate-50';
+      el.textContent = d;
+      grid.appendChild(el);
     });
-    grid.appendChild(cell);
+    
+    const year = currentViewDate.getFullYear();
+    const month = currentViewDate.getMonth();
+    qs('#monthDisplay').textContent = new Intl.DateTimeFormat('en-US',{month:'long',year:'numeric'}).format(currentViewDate);
+
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+    // Padding for start of month
+    for(let i=0; i<firstDay; i++){ 
+      const empty = document.createElement('div'); 
+      empty.className = 'h-36 border-r border-b bg-slate-50/30'; 
+      grid.appendChild(empty); 
+    }
+
+    // Days of the month
+    for(let day=1; day<=daysInMonth; day++){
+      const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+      
+      // We filter tasks safely here
+      const dayTasks = tasks.filter(t => t && t.date === dateStr);
+      
+      const cell = document.createElement('div'); 
+      cell.className = 'h-36 border-r border-b p-1 relative group overflow-y-auto bg-white';
+      cell.innerHTML = `<span class="text-[10px] font-bold text-slate-400">${day}</span>`;
+
+      const addBtn = document.createElement('button');
+      addBtn.textContent = '+';
+      addBtn.className = 'absolute top-1 right-1 text-xs opacity-0 group-hover:opacity-100 bg-indigo-50 px-1 rounded';
+      addBtn.onclick = () => openModal(null, dateStr);
+      cell.appendChild(addBtn);
+
+      dayTasks.forEach(task => {
+        try {
+          const t = document.createElement('div');
+          t.className = `mt-1 p-2 rounded text-[10px] font-bold cursor-pointer ${priorityClass[task.priority] || 'priority-low'} ${statusClass[task.status] || ''}`;
+          t.innerHTML = `${task.type === 'UGC Video' ? '💰 ' : ''}${task.title || 'Untitled'}`;
+          t.onclick = (e) => { e.stopPropagation(); openModal(task.id); };
+          cell.appendChild(t);
+        } catch (taskErr) {
+          console.error("Error rendering a specific task:", taskErr);
+        }
+      });
+      grid.appendChild(cell);
+    }
+    updateSummary();
+  } catch (err) {
+    console.error("Calendar Render Crash:", err);
   }
-  updateSummary();
 }
 
 function updateSummary() {
@@ -293,3 +322,4 @@ fetchTasks();
 </script>
 </body>
 </html>
+
