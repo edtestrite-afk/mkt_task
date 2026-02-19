@@ -345,11 +345,19 @@ async function saveTask(){
 
 async function deleteTask(){
   if(editingId && confirm("Delete task?")){
-    tasks = tasks.filter(t => t.id !== editingId);
+    const idToDelete = editingId;
+    tasks = tasks.filter(t => t.id !== idToDelete);
     saveLocalTasks();
     renderCalendar();
     closeModal();
-    try { await db.from('tasks').delete().eq('id', editingId); } catch(e) {}
+    try {
+      const { error } = await db.from('tasks').delete().eq('id', Number(idToDelete) || idToDelete);
+      if(error) {
+        console.error('Delete failed:', error.message);
+        alert('Delete failed on server: ' + error.message);
+        fetchTasks();
+      }
+    } catch(e) { fetchTasks(); }
   }
 }
 
