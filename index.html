@@ -271,10 +271,10 @@ async function fetchTasks() {
   tasks = loadLocalTasks().filter(t => t.date && !isNaN(new Date(t.date).getTime()));
   renderCalendar();
 
-  // Try Supabase in background — if it works and has data, use it
+  // Supabase always wins — replaces local data with the real DB state
   try {
     const { data, error } = await db.from('tasks').select('*').order('created_at', { ascending: true });
-    if (!error && data && data.length > 0) {
+    if (!error && data) {
       tasks = data.filter(t => t.date && !isNaN(new Date(t.date).getTime()));
       saveLocalTasks();
       renderCalendar();
