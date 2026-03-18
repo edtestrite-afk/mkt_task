@@ -21,6 +21,7 @@
     .status-approved { background-color: #e0f2fe; border-left: 4px solid #0ea5e9; }
     .status-scheduled { background-color: #80ed99; border-left: 4px solid #4f772d; }
     .status-published { background-color: #d1fae5; border-left: 4px solid #10b981; }
+    .status-pendingcontent { background-color: #f3e8ff; border-left: 4px solid #a855f7; }
     .modal-overlay { display: none; position: fixed; inset: 0; z-index: 60; align-items: center; justify-content: center; background: rgba(0,0,0,0.5); }
     .modal-overlay[aria-hidden="false"] { display: flex; }
     /* Export modal */
@@ -110,6 +111,7 @@
           <label class="text-xs font-bold">Status</label>
           <select id="mStatus" class="w-full p-2 border rounded-lg text-xs">
             <option>In Progress</option>
+            <option>Pending on Content</option>
             <option>Needs Review</option>
             <option>Approved</option>
             <option>Scheduled</option>
@@ -174,6 +176,7 @@ const qs = s => document.querySelector(s);
 const priorityClass = { high:'priority-high', med:'priority-med', low:'priority-low' };
 const statusClass = {
   "In Progress": "status-inprogress",
+  "Pending on Content": "status-pendingcontent",
   "Needs Review": "status-needsreview",
   "Approved": "status-approved",
   "Scheduled": "status-scheduled",
