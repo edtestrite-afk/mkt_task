@@ -320,30 +320,34 @@ async function saveTask(){
   };
   if(!data.title || !data.date) return alert('Title and Date required');
 
-  // Save locally FIRST — task appears on calendar immediately, no Supabase dependency
-  if(editingId) {
-    const idx = tasks.findIndex(t => t.id === editingId);
-    if(idx !== -1) tasks[idx] = { ...tasks[idx], ...data };
-  } else {
-    tasks.push({ ...data, id: 'local_' + Date.now(), created_at: new Date().toISOString() });
-  }
-  saveLocalTasks();
-  renderCalendar();
-  closeModal();
+  const saveBtn = qs('#saveBtn');
+  saveBtn.textContent = 'Saving…';
+  saveBtn.disabled = true;
 
-  // Try Supabase sync in background (won't block UI or cause errors if it fails)
   try {
     if(editingId) {
-      await db.from('tasks').update(data).eq('id', Number(editingId) || editingId);
+      // Update existing task
+      const numId = Number(editingId) || editingId;
+      const { error } = await db.from('tasks').update(data).eq('id', numId);
+      if(error) throw error;
+      const idx = tasks.findIndex(t => t.id === editingId);
+      if(idx !== -1) tasks[idx] = { ...tasks[idx], ...data };
     } else {
-      const localTask = tasks[tasks.length - 1];
+      // Insert new task — wait for real Supabase ID before closing
       const { data: inserted, error } = await db.from('tasks').insert([data]).select().single();
-      if(!error && inserted) {
-        const idx = tasks.findIndex(t => t.id === localTask.id);
-        if(idx !== -1) { tasks[idx] = inserted; saveLocalTasks(); }
-      }
+      if(error) throw error;
+      tasks.push(inserted);
     }
-  } catch(e) { /* Supabase unavailable — local save is sufficient */ }
+    saveLocalTasks();
+    renderCalendar();
+    closeModal();
+  } catch(e) {
+    console.error('Save error:', e);
+    alert('Save failed: ' + (e.message || 'Check Supabase connection'));
+  } finally {
+    saveBtn.textContent = 'Save';
+    saveBtn.disabled = false;
+  }
 }
 
 async function deleteTask(){
