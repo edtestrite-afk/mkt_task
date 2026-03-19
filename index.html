@@ -334,7 +334,7 @@ async function saveTask(){
   // Try Supabase sync in background (won't block UI or cause errors if it fails)
   try {
     if(editingId) {
-      await db.from('tasks').update(data).eq('id', editingId);
+      await db.from('tasks').update(data).eq('id', Number(editingId) || editingId);
     } else {
       const localTask = tasks[tasks.length - 1];
       const { data: inserted, error } = await db.from('tasks').insert([data]).select().single();
