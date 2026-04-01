@@ -80,10 +80,10 @@
         <div>
           <label class="text-xs font-bold">Task Type</label>
           <select id="mType" class="w-full p-2 border rounded-lg text-xs">
-            <option value="UGC Video">8-10 Short-Form TikTok Videos</option>
+            <option value="UGC Video">UGC Videos - Sofia</option>
             <option value="Blog Article">Blog Article</option>
             <option value="Shoot Coordination">Shoot Coordination</option>
-            <option value="Crosspost">12 Posts Cross-Post IG/FB</option>
+            <option value="Crosspost">16 Cross-Post IG/FB/TK</option>
             <option value="Content Calendar">Update Content Calendar</option>
             <option value="UGC Outreach">UGC Outreach</option>
           </select>
@@ -106,6 +106,15 @@
           <label class="flex items-center gap-2"><input type="checkbox" value="Film" class="platform-checkbox"> Film</label>
         </div>
       </div>
+      <div>
+        <label class="text-xs font-bold">UGC Face Rate</label>
+        <select id="mFaceRate" class="w-full p-2 border rounded-lg text-xs">
+          <option value="1">Full Rate (100%) — Face visible 10+ sec</option>
+          <option value="0.5">Half Rate (50%) — Face visible &lt;9 sec</option>
+          <option value="0.25">Partial Rate (25%) — Hand / Voice-over / Coord</option>
+          <option value="0">N/A</option>
+        </select>
+      </div>
       <div class="grid grid-cols-2 gap-3">
         <div>
           <label class="text-xs font-bold">Status</label>
@@ -124,7 +133,7 @@
         </div>
       </div>
       <div>
-        <label class="text-xs font-bold">Description</label>
+        <label class="text-xs font-bold">Caption and Hashtag</label>
         <textarea id="mDesc" rows="3" class="w-full p-2 border rounded-lg text-xs resize-none" placeholder="Optional notes or details…"></textarea>
       </div>
       <div class="flex gap-2">
@@ -298,6 +307,7 @@ function openModal(id=null,date=null){
       qs('#mStatus').value=task.status;
       qs('#mDate').value=task.date;
       qs('#mDesc').value=task.description||'';
+      qs('#mFaceRate').value=task.face_rate!=null?task.face_rate:1;
       document.querySelectorAll('.platform-checkbox').forEach(cb=>cb.checked=task.platforms?.includes(cb.value));
       qs('#deleteBtn').classList.remove('hidden');
     }
@@ -316,7 +326,8 @@ async function saveTask(){
     status: qs('#mStatus').value,
     date: qs('#mDate').value,
     platforms: selectedPlatforms,
-    description: qs('#mDesc').value.trim()
+    description: qs('#mDesc').value.trim(),
+    face_rate: parseFloat(qs('#mFaceRate').value)
   };
   if(!data.title || !data.date) return alert('Title and Date required');
 
@@ -459,21 +470,27 @@ function updateSummary() {
 
   const publishedUGC = monthlyTasks.filter(t => t.type === 'UGC Video' && t.status === 'Published');
   const count = publishedUGC.length;
-  const rate = count >= 15 ? 18 : count >= 10 ? 15 : count >= 6 ? 12 : count >= 1 ? 10 : 0;
+  const tierRate = count >= 15 ? 18 : count >= 10 ? 15 : count >= 6 ? 12 : count >= 1 ? 10 : 0;
+
+  // Factor in face rate per video
+  const totalBonus = publishedUGC.reduce((sum, t) => {
+    const faceRate = t.face_rate != null ? t.face_rate : 1;
+    return sum + (tierRate * faceRate);
+  }, 0);
 
   qs('#summaryStats').innerHTML = `
-    <div><b>Current Tier Rate:</b> $${rate}/video</div>
-    <div><b>Total UGC Bonus:</b> $${count * rate}</div>
+    <div><b>Current Tier Rate:</b> $${tierRate}/video</div>
+    <div><b>Total UGC Bonus:</b> $${totalBonus.toFixed(2)}</div>
   `;
   updateCoreProgress(monthlyTasks);
 }
 
 function updateCoreProgress(monthlyTasks){
   const goals=[
-    {name:'Short-Form UGC TikTok Videos', target:10, type:'UGC Video'},
+    {name:'UGC Videos - Sofia', target:10, type:'UGC Video'},
     {name:'Blog Article', target:1, type:'Blog Article'},
     {name:'Shoot Coordination', target:3, type:'Shoot Coordination'},
-    {name:'12 Posts Cross-Post IG/FB', target:12, type:'Crosspost'},
+    {name:'16 Cross-Post IG/FB/TK', target:16, type:'Crosspost'},
     {name:'Update Content Calendar', target:1, type:'Content Calendar'},
     {name:'UGC Outreach', target:30, type:'UGC Outreach'}
   ];
