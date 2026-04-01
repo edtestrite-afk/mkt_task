@@ -106,7 +106,7 @@
           <label class="flex items-center gap-2"><input type="checkbox" value="Film" class="platform-checkbox"> Film</label>
         </div>
       </div>
-      <div>
+      <div id="faceRateField" style="display:none">
         <label class="text-xs font-bold">UGC Face Rate</label>
         <select id="mFaceRate" class="w-full p-2 border rounded-lg text-xs">
           <option value="1">Full Rate (100%) — Face visible 10+ sec</option>
@@ -205,6 +205,13 @@ for(let y=startYear-5;y<=startYear+5;y++){
   const opt=document.createElement('option'); opt.value=y; opt.textContent=y;
   selectYear.appendChild(opt);
 }
+
+// Show face rate only for UGC Videos - Sofia
+function toggleFaceRate() {
+  const type = qs('#mType').value;
+  qs('#faceRateField').style.display = type === 'UGC Video' ? 'block' : 'none';
+}
+qs('#mType').addEventListener('change', toggleFaceRate);
 
 selectMonth.value = currentViewDate.getMonth();
 selectYear.value = currentViewDate.getFullYear();
@@ -312,6 +319,7 @@ function openModal(id=null,date=null){
       qs('#deleteBtn').classList.remove('hidden');
     }
   } else if(date){ qs('#mDate').value=date; }
+  toggleFaceRate();
   qs('#taskModal').setAttribute('aria-hidden','false');
 }
 
@@ -327,7 +335,7 @@ async function saveTask(){
     date: qs('#mDate').value,
     platforms: selectedPlatforms,
     description: qs('#mDesc').value.trim(),
-    face_rate: parseFloat(qs('#mFaceRate').value)
+    ...(qs('#mType').value === 'UGC Video' && { face_rate: parseFloat(qs('#mFaceRate').value) })
   };
   if(!data.title || !data.date) return alert('Title and Date required');
 
@@ -396,7 +404,14 @@ function platformIcon(platform) {
 
 function renderCalendar(){
   try {
-    selectMonth.value = currentViewDate.getMonth();
+    // Show face rate only for UGC Videos - Sofia
+function toggleFaceRate() {
+  const type = qs('#mType').value;
+  qs('#faceRateField').style.display = type === 'UGC Video' ? 'block' : 'none';
+}
+qs('#mType').addEventListener('change', toggleFaceRate);
+
+selectMonth.value = currentViewDate.getMonth();
     selectYear.value = currentViewDate.getFullYear();
     
     const grid = qs('#calendar'); 
